@@ -18,4 +18,3 @@ The code:
 - Denoising spectra increases score consistency and reduces false positives connection in molecular networks.
 - Molecular networks after denoising show tighter clusters that are better separated by higher distances, resulting in improved network structure.  
 - Severe denoising (e.g., 5–10% of relative intensity cutoff) can lead to loss of structural information, making different compounds overlap and appear indistinguishable.     
--  

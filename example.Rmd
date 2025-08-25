@@ -1,0 +1,121 @@
+---
+title: "MS/MS_cleaning_example"
+author: "Nicola Dalla Valle"
+date: "2025-08-25"
+output: html_document
+---
+
+libraries and function needed
+
+```{r}
+library(tidyverse)
+library(MASS)
+library(Spectra)
+library(dplyr)
+library(stats)
+
+
+cleaning_ref<- function(ms2){
+  ms2_tb <- as.data.frame(
+    spectraData(sps) 
+  ) %>%
+    mutate( ms2_raw = mapply(cbind, mz(ms2), intensity(ms2), SIMPLIFY = FALSE)) %>%
+    mutate(ms2_raw = map(ms2_raw, function(t){
+      colnames(t) <- c("mz", "intensity")
+      t %>%
+        as.data.frame() %>%
+        mutate(mz = as.numeric(mz)) %>%
+        mutate(intensity = as.numeric(intensity))
+    })) %>%
+    mutate(ms2_RLM = map(ms2_raw, function(t){
+      t <- t %>%
+        filter(intensity>0) %>%
+        arrange(intensity) %>%
+        mutate(order = seq(nrow(.)))
+      p75 <- t %>%
+        pull(intensity) %>% 
+        quantile(0.75)
+      u <- t %>%
+        filter(intensity < p75)
+      if(nrow(u)>3){
+        mdl <- rlm(data = u, log10(intensity) ~ order)
+        t_filt<- t %>% 
+          mutate(pred = predict(mdl, t)) %>%
+          mutate(res = log10(intensity)- pred ) %>%
+          filter(res > sd(residuals(mdl))*3) %>%
+          arrange(mz)
+        if (nrow(t_filt) > 0) {
+          t<- t_filt
+        } else {
+          t<- t %>% arrange(mz)
+        }
+      } else {
+        return(t %>% arrange(mz))  # Not enough points to model
+      }
+    }))
+  ms2_cl <- ms2_tb %>%
+    mutate(
+      mz = map(ms2_RLM, ~ .x$mz),
+      intensity = map(ms2_RLM, ~ .x$intensity)
+    ) %>%
+    filter(map_lgl(mz, ~ length(.x) > 0)) %>%
+    as.data.frame() %>%
+    Spectra()
+  return(ms2_cl)
+}
+```
+
+this noise removing function can work on singular MS/MS spectra, without the necessity of other information The only assumption is that noise is representing the major number of ions within the spectra so that ordered ions intesities can shown the behaviuor shown in the following example considering a synthetic Spectra:
+
+```{r}
+#creating a MS/MS spectra with 7 fragmentation ions with intensities higher than 20% of maximum intensity
+
+frag_mz <- sample(90:300, 7)
+frag_int <- sample(10:100, 7)
+
+#add 100 noise ions with relative low intensity (between 1 nad 5% of maximum intensity)
+set.seed(123)
+noise_mz <- sample(90:300, 100)
+noise_int <- runif(100, min = 1, max = 5)
+
+spd <- DataFrame(msLevel = 2L, rtime= 12)
+spd$mz <- list(c(frag_mz, noise_mz))
+spd$intensity <- list(c(frag_int, noise_int))
+
+sps <- Spectra(spd)
+
+#evaluating the behaviour of ordered intensity ions
+
+int <- intensity(sps)[[1]]
+tab <- data.frame(int = sort(int),
+                  n = 1:length(int))
+
+#building linear model on the lowest 75th quantile of all orderd intensity ions
+
+sub <- tab %>%
+  filter(int < quantile(int, probs = 0.75)) %>%
+  mutate(idx = seq_len(n()))
+
+mod <- rlm(log10(int) ~ idx, data = sub)
+sd_res <- sd(sub$int)
+
+tab$idx <- seq_len(nrow(tab))
+preds <- predict(mod, newdata = tab)
+
+plot(x=tab$n, log10(tab$int))
+lines(tab$n, preds, col = "red", lwd = 2, lty = 1) 
+lines(tab$n, preds + sd(residuals(mod))*3, col = "blue", lwd = 2, lty = 1) 
+lines(tab$n, preds - sd(residuals(mod))*3, col = "blue", lwd = 2, lty = 1) 
+```
+Noise, assumed to follow a random distribution of intensities, aligns approximately along a linear baseline when ordered by intensity. 
+Real fragmentation ions deviate from this behaviour, so their isolation and selection is possible.
+In our case, ions exeeding 3 times the residual of fitted model (blue line above) are considered as "real" fragemntation ion.
+
+the effect of the denoising is visible on spectral plotting:
+
+```{r}
+plotSpectra(sps, main="spectra with noise")
+
+plotSpectra(cleaning_ref(sps), main="denoised spectra")
+```
+

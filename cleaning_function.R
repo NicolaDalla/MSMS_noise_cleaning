@@ -6,7 +6,7 @@ library(stats)
 
 cleaning_ref<- function(ms2){
   ms2_tb <- as.data.frame(
-    spectraData(sps) 
+    spectraData(ms2) 
   ) %>%
     mutate( ms2_raw = mapply(cbind, mz(ms2), intensity(ms2), SIMPLIFY = FALSE)) %>%
     mutate(ms2_raw = map(ms2_raw, function(t){
@@ -51,4 +51,5 @@ cleaning_ref<- function(ms2){
     as.data.frame() %>%
     Spectra()
   return(ms2_cl)
+
 }

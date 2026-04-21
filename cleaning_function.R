@@ -17,6 +17,9 @@ cleaning_ref<- function(ms2){
         mutate(intensity = as.numeric(intensity))
     })) %>%
     mutate(ms2_RLM = map(ms2_raw, function(t){
+       if (nrow(t) < 30) {
+        return(t %>% arrange(mz)) 
+      }
       t <- t %>%
         filter(intensity>0) %>%
         arrange(intensity) %>%

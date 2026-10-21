@@ -1,6 +1,9 @@
 # MSMS_noise_cleaning
 code to clean MS/MS spectra relaying only on ions intensities
 
+Shiny app is available for output visualization. Demo data could be used.
+[Direct web app link](https://eo2tr9-nicola-dalla0valle.shinyapps.io/denoise_msms/)
+
 **Reference:**  
 Dalla Valle N., Garcia-Aloy M., Robatscher P., Franceschi P., & Oberhuber M. (2025). Improving Spectral Similarity and Molecular Network Reliability through Noise Signal Filtering in MS/MS Spectra. Analytical Chemistry, 97(29), 15873–15882.
 https://doi.org/10.1021/acs.analchem.5c02109

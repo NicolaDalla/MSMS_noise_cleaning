@@ -17,7 +17,7 @@ cleaning_ref<- function(ms2){
         mutate(intensity = as.numeric(intensity))
     })) %>%
     mutate(ms2_RLM = map(ms2_raw, function(t){
-       if (nrow(t) < 30) {
+      if (nrow(t) < 30) {
         return(t %>% arrange(mz)) 
       }
       t <- t %>%
@@ -51,8 +51,8 @@ cleaning_ref<- function(ms2){
       intensity = map(ms2_RLM, ~ .x$intensity)
     ) %>%
     filter(map_lgl(mz, ~ length(.x) > 0)) %>%
+    dplyr::select(-c("ms2_raw", "ms2_RLM"))%>%
     as.data.frame() %>%
     Spectra()
   return(ms2_cl)
-
 }

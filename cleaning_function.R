@@ -31,10 +31,10 @@ cleaning_ref<- function(ms2){
         filter(intensity < p75)
       if(nrow(u)>3){
         mdl <- rlm(data = u, log10(intensity) ~ order)
-        t_filt<- t %>% 
-          mutate(pred = predict(mdl, t)) %>%
-          mutate(res = abs(pred - log10(intensity))) %>%
-          filter(res > sd(residuals(mdl))*3) %>%
+        t_filt <- t %>%
+          mutate(pred = predict(mdl, newdata = t),
+                 res  = log10(intensity) - pred) %>%   
+          filter(res > 3 * sd(residuals(mdl))) %>%
           arrange(mz)
         if (nrow(t_filt) > 0) {
           t<- t_filt
